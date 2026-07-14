@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Envs
+.venv/
+.venv*/
+env/
+.env
+.env.*
+
+# Local training data / live logs (fetch benchmark from the public API)
+data/
+*.tmp
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
