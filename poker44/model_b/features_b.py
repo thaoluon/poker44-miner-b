@@ -39,9 +39,10 @@ def _safe(value: Any, default: float = 0.0) -> float:
 def _moments(values: List[float], prefix: str, feats: Dict[str, float]) -> None:
     """Aggregate a per-hand value list into distribution moments.
 
-    Uses mean/std/median/p10/p90 -- deliberately different moments from the
-    primary model's mean/std/min/max, so even where an underlying signal is
-    weakly shared the aggregated columns decorrelate.
+    Uses mean/std/median/p10/p90/min/max -- a richer 7-moment view (the top
+    Poker44 miner's aggregation depth) over Model B's geometry signals. The
+    signals themselves stay distinct from the primary model's, so this adds
+    resolution without importing the pattern family.
     """
     if values:
         arr = np.asarray(values, dtype=float)
@@ -50,8 +51,10 @@ def _moments(values: List[float], prefix: str, feats: Dict[str, float]) -> None:
         feats[f"{prefix}_med"] = float(np.median(arr))
         feats[f"{prefix}_p10"] = float(np.percentile(arr, 10))
         feats[f"{prefix}_p90"] = float(np.percentile(arr, 90))
+        feats[f"{prefix}_min"] = float(np.min(arr))
+        feats[f"{prefix}_max"] = float(np.max(arr))
     else:
-        for suffix in ("mean", "std", "med", "p10", "p90"):
+        for suffix in ("mean", "std", "med", "p10", "p90", "min", "max"):
             feats[f"{prefix}_{suffix}"] = 0.0
 
 

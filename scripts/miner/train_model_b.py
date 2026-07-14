@@ -25,12 +25,12 @@ import sys
 from pathlib import Path
 
 import numpy as np
-from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.isotonic import IsotonicRegression
 from sklearn.metrics import average_precision_score, roc_auc_score
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+from poker44.model_b.ensemble import WeightedTreeEnsemble  # noqa: E402
 from poker44.model_b.features_b import chunk_features_b  # noqa: E402
 from poker44.score.scoring import reward  # noqa: E402
 from poker44.validator.payload_view import prepare_hand_for_miner  # noqa: E402
@@ -54,19 +54,6 @@ SEED = 7
 # Same idea the primary model uses, but applied to Model B's disjoint base
 # features, so it lifts strength without importing the primary model's signal.
 USE_RELATIVE_B = True
-
-HGB_PARAMS = dict(
-    loss="log_loss",
-    learning_rate=0.03,
-    max_iter=600,
-    max_leaf_nodes=15,
-    max_depth=4,
-    min_samples_leaf=25,
-    l2_regularization=2.0,
-    max_features=0.6,
-    early_stopping=False,
-    random_state=SEED,
-)
 
 
 def to_miner_view(group: list[dict]) -> list[dict]:
@@ -157,9 +144,7 @@ def make_folds(dates: np.ndarray):
 
 
 def fit(X, y):
-    model = HistGradientBoostingClassifier(**HGB_PARAMS)
-    model.fit(X, y)
-    return model
+    return WeightedTreeEnsemble(seed=SEED).fit(X, y)
 
 
 def calibrate_iso(oof_raw, labels):
@@ -306,7 +291,7 @@ def main():
                 "calibration": calib,
                 "n_train_examples": int(len(y)),
                 "release_dates": unique_dates,
-                "hgb_params": {k: v for k, v in HGB_PARAMS.items()},
+                "learner": "WeightedTreeEnsemble(ExtraTrees0.45+RF0.25+HistGB0.30)",
                 "seed": SEED,
                 "use_relative": bool(USE_RELATIVE_B),
                 "net_blend_weight": float(net_weight) if net_saved else 0.0,

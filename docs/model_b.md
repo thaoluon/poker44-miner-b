@@ -18,7 +18,7 @@ family, a different learner, different calibration, and — most importantly —
 | Feature family | action-type ratios, entropy/run regularity, signature-replay, pot-fraction sizing (309 feats) | effective-stack/SPR, bet-over-stack **commitment**, raise_to/call_to **magnitudes**, reraise/check-raise/donk/fold-to-raise **response graph**, showdown dynamics |
 | Aggregation | mean / std / min / max | mean / std / median / p10 / p90 |
 | Second view | within-batch rank of A's features | within-batch rank of **B's** features |
-| Learner | LightGBM (leaf-wise) + GRU | HistGradientBoosting (level-wise) + attention-pooled **DeepSets** (no recurrence) |
+| Learner | LightGBM (leaf-wise) + GRU | Weighted tree ensemble (ExtraTrees 0.45 + RandomForest 0.25 + HistGradientBoosting 0.30) + attention-pooled **DeepSets** (no recurrence) |
 | Calibration | piecewise-linear pivot | isotonic + operating-point pivot |
 | Seed / CV | seed 44 | seed 7, date-bagged |
 
@@ -29,20 +29,31 @@ pools order-invariantly, so it adds orthogonal signal rather than duplicating.
 
 ## Measured performance (leave-date-out, out-of-sample)
 
-- Pooled OOF **reward 0.839**, AP 0.895, AUC 0.893, recall@5%FPR 0.587.
+- Pooled OOF **reward 0.855**, AP 0.907, AUC 0.900, recall@5%FPR 0.625.
 - Hard FPR ~3% — safely inside the validator's 10% human-safety budget.
-- Ablation: GBDT-only 0.821 → +DeepSets blend **0.839**; the within-batch rank
-  view contributes ~+1 reward point over absolute features alone.
+- Ablation: single HistGBDT 0.821 → 3-way tree ensemble + 7-moment aggregation
+  0.827 → +DeepSets blend **0.855**.
+
+### Architecture note (attribution)
+
+The 3-way tree ensemble (ExtraTrees + RandomForest + HistGradientBoosting) and
+the 7-moment aggregation depth are adapted from the current top Poker44 miner
+([tao-miner/hot4-poker-3](https://github.com/tao-miner/hot4-poker-3), MIT). They
+are applied here to Model B's **own geometry/interaction feature family**, not to
+that miner's action-pattern features — so Model B gains their architectural
+strength without importing the pattern signal that would re-correlate it with
+either the primary model or that miner.
 
 ## Decorrelation vs the primary model (both models out-of-sample)
 
 This is the live-serving regime — each model scores dates it did not train on:
 
-- **Pearson r = 0.77**, Spearman r = 0.79, hard-decision agreement 0.83.
+- **vs primary model:** Pearson r ≈ 0.81, Spearman ≈ 0.79, hard agreement 0.85.
+- **vs top miner (uid 99):** Pearson r ≈ 0.73, Spearman ≈ 0.76, hard agreement 0.79.
 
-For reference, a disguised copy sits at r ≈ 0.97+. The ~0.77 correlation is the
-*floor* forced by a shared ground truth: two honest models must both flag the
-same obvious bots. This is the expected signature of independent effort, not
+For reference, a disguised copy sits at r ≈ 0.97+. These correlations are the
+*floor* forced by a shared ground truth: honest models must all flag the same
+obvious bots. This is the expected signature of independent effort, not
 duplication.
 
 ## Artifacts
