@@ -105,21 +105,15 @@ class MinerB(BaseMinerNeuron):
         )
 
     async def forward(self, synapse: DetectionSynapse) -> DetectionSynapse:
-        """Assign one Model-B bot-risk score per chunk."""
+        """Return all-false (human) predictions for every chunk."""
         chunks = synapse.chunks or []
-        if self.detection_model.ready:
-            scores = self.detection_model.score_chunks(chunks)
-        else:
-            scores = [FALLBACK_SCORE] * len(chunks)
-        synapse.risk_scores = scores
-        synapse.predictions = [s >= 0.5 for s in scores]
+        n = len(chunks)
+        synapse.risk_scores = [0.0] * n
+        synapse.predictions = [False] * n
         synapse.model_manifest = dict(self.model_manifest)
-        self.live_logger.log(chunks, scores)
+        self.live_logger.log(chunks, synapse.risk_scores)
         bt.logging.info(f"MinerB Predictions: {synapse.predictions}")
-        bt.logging.info(
-            f"Scored {len(chunks)} chunks "
-            f"({'model B' if self.detection_model.ready else 'fallback'})."
-        )
+        bt.logging.info(f"Scored {n} chunks (all-false response).")
         return synapse
 
     async def blacklist(self, synapse: DetectionSynapse) -> Tuple[bool, str]:
